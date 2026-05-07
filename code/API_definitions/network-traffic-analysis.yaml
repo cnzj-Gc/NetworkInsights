@@ -17,17 +17,13 @@ info:
 
     # Request Parameters Definition:
     * **networkId**: Unique identifier of the analyzed network (UUID format).
-    * **serviceTime**: Time range for network analysis (start + end time, RFC 3339 with timezone). Pass as JSON string in query param.
-    * **period**: Analysis granularity (enumeration: 'DAY', 'HOUR').
+    * **timePeriod**: Time range for network analysis (start + end time, RFC 3339 with timezone).
+    * **frequency**: Analysis granularity (enumeration: 'DAY', 'HOUR').
 
     # Authorization and authentication
     The "Camara Security and Interoperability Profile" provides details of how an API consumer requests an access token. Please refer to Identity and Consent Management (https://github.com/camaraproject/IdentityAndConsentManagement/) for the released version of the profile.
 
     The specific authorization flows to be used will be agreed upon during the onboarding process, happening between the API consumer and the API provider, taking into account the declared purpose for accessing the API, whilst also being subject to the prevailing legal framework dictated by local legislation.
-
-    In cases where personal data is processed by the API and users can exercise their rights through mechanisms such as opt-in and/or opt-out, the use of three-legged access tokens is mandatory. This ensures that the API remains in compliance with privacy regulations, upholding the principles of transparency and user-centric privacy-by-design.
-
-    This API requires users to provide user information via request header signature authentication. By using the AccessKeyId (user account), SignatureNonce (random unique identifier), Version (date identifier), Timestamp (timestamp), and Signature (calculated from other request headers using an encryption algorithm) fields in the request headers, the API verifies the Signature. Upon verification, the API accepts the value in AccessKeyId as the user identity to match user data.
 
     # Additional CAMARA error responses
     The list of error codes in this API specification is not exhaustive. Therefore the API specification may not document some non-mandatory error statuses as indicated in `CAMARA API Design Guide`.
@@ -73,23 +69,23 @@ paths:
               type: object
               required:
                 - networkId
-                - serviceTime
-                - period
+                - timePeriod
+                - frequency
               properties:
                 networkId:
                   $ref: "#/components/schemas/NetworkId"
-                serviceTime:
-                  $ref: "#/components/schemas/ServiceTime"
-                period:
-                  $ref: "#/components/schemas/Period"
+                timePeriod:
+                  $ref: "#/components/schemas/TimePeriod"
+                frequency:
+                  $ref: "#/components/schemas/Frequency"
             examples:
               ValidRequest:
                 value:
                   networkId: "123e4567-e89b-12d3-a456-426614174000"
-                  serviceTime:
-                    start: "2024-06-01T12:00:00Z"
-                    end: "2024-07-01T12:00:00Z"
-                  period: "DAY"
+                  timePeriod:
+                    startDate: "2024-06-01T12:00:00Z"
+                    endDate: "2024-07-01T12:00:00Z"
+                  frequency: "DAY"
       responses:
         "200":
           description: Successful response with network traffic analysis data
@@ -137,8 +133,9 @@ components:
     XCorrelator:
       description: Correlator string, UUID format recommended but any string matching the pattern can be used
       type: string
-      pattern: ^[a-zA-Z0-9-_:;.\/<>{}]{0,256}$
+      pattern: '^[a-zA-Z0-9-_:;.\/<>{}]{0,256}$'
       maxLength: 256
+      minLength: 1
       example: "b4333c46-49c0-4f62-80d7-f0ef930f1c46"
 
     NetworkId:
@@ -147,25 +144,24 @@ components:
       format: uuid
       example: "123e4567-e89b-12d3-a456-426614174000"
 
-    ServiceTime:
+    TimePeriod:
       type: object
-      description: Time range for network traffic analysis
+      description: Time range for network traffic analysis. A period of time defined by a start date and an end date
       properties:
-        start:
+        startDate:
           type: string
           format: date-time
-          description: Start time of the analysis period
+          description: An instant of time, starting of the TimePeriod. It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone.
           example: "2024-06-01T12:00:00Z"
-        end:
+        endDate:
           type: string
           format: date-time
-          description: End time of the analysis period
+          description: An instant of time, ending of the TimePeriod. It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone.
           example: "2024-07-01T12:00:00Z"
       required:
-        - start
-        - end
+        - startDate
 
-    Period:
+    Frequency:
       description: Analysis granularity (time interval for aggregation)
       type: string
       enum: ["DAY", "HOUR"]
@@ -175,18 +171,14 @@ components:
       type: object
       description: Response schema for traffic analysis
       required:
-        - status
         - message
         - data
       properties:
-        status:
-          type: integer
-          description: HTTP response status code (matches the HTTP status code of the response)
-          example: 200
         message:
           type: string
           description: Human-readable status message
           example: "Network traffic analysis has been completed"
+          maxLength: 256
         data:
           type: object
           description: Traffic analysis data
@@ -194,6 +186,8 @@ components:
             records:
               type: array
               description: Array of traffic records per application
+              minItems: 1
+              maxItems: 1000
               items:
                 type: object
                 properties:
@@ -201,14 +195,18 @@ components:
                     type: string
                     description: Application name
                     example: "whatsapp"
-                  address:
+                    maxLength: 128
+                  ipv4Address:
                     type: string
-                    description: Application server IP address
+                    description: Application server IP ipv4 address
                     example: "202.112.17.122"
+                    format: ipv4
+                    maxLength: 15
                   description:
                     type: string
                     description: Application description
                     example: "A free cross-platform app for messaging, calls, and media sharing."
+                    maxLength: 512
                   accessCount:
                     type: integer
                     description: Total number of accesses to the application
@@ -229,21 +227,27 @@ components:
                     description: Total traffic (up + down, bytes)
                     minimum: 0
                     example: 307200  # 300 KB
-                  startTime:
+                  startDate:
                     type: string
                     format: date-time
                     description: Start time of the record interval
                     example: "2024-06-07T00:00:00Z"
-                  endTime:
+                    pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$'
+                    maxLength: 30
+                  endDate:
                     type: string
                     format: date-time
                     description: End time of the record interval
                     example: "2024-06-07T23:59:59Z"
+                    pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$'
+                    maxLength: 30
                   accessDate:
                     type: string
                     format: date
                     description: Date of the traffic record (YYYY-MM-DD)
                     example: "2024-06-07"
+                    pattern: '^\d{4}-\d{2}-\d{2}$'
+                    maxLength: 10
             total:
               type: integer
               description: Total number of application records
@@ -261,8 +265,6 @@ components:
         status:
           type: integer
           format: int32
-          minimum: 100
-          maximum: 599
           description: HTTP response status code
         code:
           type: string
@@ -293,7 +295,6 @@ components:
                     enum:
                       - INVALID_ARGUMENT
                       - OUT_OF_RANGE
-                      - "{{SPECIFIC_CODE}}"
           examples:
             GENERIC_400_INVALID_ARGUMENT:
               description: Invalid Argument. Generic Syntax Exception
@@ -307,12 +308,6 @@ components:
                 status: 400
                 code: OUT_OF_RANGE
                 message: Client specified an invalid range.
-            GENERIC_400_{{SPECIFIC_CODE}}:
-              description: Specific Syntax Exception regarding a field that is relevant in the context of the API
-              value:
-                status: 400
-                code: "{{SPECIFIC_CODE}}"
-                message: Message for specific code
     Generic401:
       description: Unauthorized
       headers:
@@ -356,8 +351,6 @@ components:
                   code:
                     enum:
                       - PERMISSION_DENIED
-                      - INVALID_TOKEN_CONTEXT
-                      - "{{SPECIFIC_CODE}}"
           examples:
             GENERIC_403_PERMISSION_DENIED:
               description: Permission denied. OAuth2 token access does not have the required scope or when the user fails operational security
@@ -365,18 +358,6 @@ components:
                 status: 403
                 code: PERMISSION_DENIED
                 message: Client does not have sufficient permissions to perform this action.
-            GENERIC_403_INVALID_TOKEN_CONTEXT:
-              description: Reflect some inconsistency between information in some field of the API and the related OAuth2 Token
-              value:
-                status: 403
-                code: INVALID_TOKEN_CONTEXT
-                message: "{{field}} is not consistent with access token."
-            GENERIC_403_{{SPECIFIC_CODE}}:
-              description: Indicate a Business Logic condition that forbids a process not attached to a specific field in the context of the API
-              value:
-                status: 403
-                code: "{{SPECIFIC_CODE}}"
-                message: Message for specific code
     Generic404:
       description: Not found
       headers:
@@ -395,8 +376,6 @@ components:
                   code:
                     enum:
                       - NOT_FOUND
-                      - IDENTIFIER_NOT_FOUND
-                      - "{{SPECIFIC_CODE}}"
           examples:
             GENERIC_404_NOT_FOUND:
               description: Resource is not found
@@ -404,34 +383,21 @@ components:
                 status: 404
                 code: NOT_FOUND
                 message: The specified resource is not found.
-            GENERIC_404_IDENTIFIER_NOT_FOUND:
-              description: Some identifier cannot be matched to a device
-              value:
-                status: 404
-                code: IDENTIFIER_NOT_FOUND
-                message: Device identifier not found.
-            GENERIC_404_{{SPECIFIC_CODE}}:
-              description: Specific situation to highlight the resource/concept not found
-              value:
-                status: 404
-                code: "{{SPECIFIC_CODE}}"
-                message: Message for specific code
 
   examples:
     TrafficAnalysisSuccess:
       value:
-        status: 200
         message: "Network traffic analysis has been completed"
         data:
           records:
             - app: "whatsapp"
-              address: "202.112.17.122"
+              ipv4Address: "202.112.17.122"
               description: "A free cross-platform app for messaging, calls, and media sharing."
               accessCount: 150
               accessUpFlow: 102400  # 100 KB
               accessDownFlow: 204800  # 200 KB
               accessFlow: 307200  # 300 KB
-              startTime: "2024-06-07T00:00:00Z"
-              endTime: "2024-06-07T23:59:59Z"
+              startDate: "2024-06-07T00:00:00Z"
+              endDate: "2024-06-07T23:59:59Z"
               accessDate: "2024-06-07"
           total: 22
