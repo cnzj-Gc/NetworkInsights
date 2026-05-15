@@ -127,26 +127,20 @@ components:
       in: header
       description: Correlation id for the different services
       schema:
-        $ref: "#/components/schemas/XCorrelator"
+        $ref: "../common/CAMARA_common.yaml#/components/schemas/XCorrelator"
 
   headers:
     x-correlator:
       description: Correlation id for the different services
       schema:
-        $ref: "#/components/schemas/XCorrelator"
+        $ref: "../common/CAMARA_common.yaml#/components/schemas/XCorrelator"
 
   schemas:
-    XCorrelator:
-      description: Correlator string, UUID format recommended but any string matching the pattern can be used
-      type: string
-      pattern: ^[a-zA-Z0-9-_:;.\/<>{}]{0,256}$
-      maxLength: 256
-      example: "b4333c46-49c0-4f62-80d7-f0ef930f1c46"
-
     NetworkId:
       description: Network ID in UUID format (unique identifier of the analyzed network)
       type: string
       format: uuid
+      maxLength: 36
       example: "123e4567-e89b-12d3-a456-426614174000"
 
     Score:
@@ -193,29 +187,6 @@ components:
         - NET_CORE
       example: "NET"
 
-    ErrorInfo:
-      type: object
-      description: A structured error response providing details about a failed request, including the HTTP status code, an error code, and a human-readable message
-      required:
-        - status
-        - code
-        - message
-      properties:
-        status:
-          type: integer
-          format: int32
-          minimum: 100
-          maximum: 599
-          description: HTTP response status code
-        code:
-          type: string
-          maxLength: 96
-          description: A human-readable code to describe the error
-        message:
-          type: string
-          maxLength: 512
-          description: A human-readable description of what the event represents
-
   responses:
     Generic400:
       description: Bad Request
@@ -225,17 +196,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 400
-                  code:
-                    enum:
-                      - INVALID_ARGUMENT
-                      - OUT_OF_RANGE
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_400_INVALID_ARGUMENT:
               description: Invalid Argument. Generic Syntax Exception
@@ -257,16 +218,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 401
-                  code:
-                    enum:
-                      - UNAUTHENTICATED
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_401_UNAUTHENTICATED:
               description: Request cannot be authenticated and a new authentication is required
@@ -282,16 +234,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 403
-                  code:
-                    enum:
-                      - PERMISSION_DENIED
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_403_PERMISSION_DENIED:
               description: Permission denied. OAuth2 token access does not have the required scope or when the user fails operational security
@@ -307,16 +250,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 404
-                  code:
-                    enum:
-                      - NOT_FOUND
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_404_NOT_FOUND:
               description: Resource is not found
@@ -326,21 +260,15 @@ components:
                 message: The specified resource is not found.
 
   examples:
-    EXAMPLE_NET:
-      value:
-        networkId: "123e4567-e89b-12d3-a456-426614174000"
-        netType: "NET"
-    EXAMPLE_NET_WIRELESS:
-      value:
-        networkId: "123e4567-e89b-12d3-a456-426614174000"
-        netType: "NET_WIRELESS"
     RESPONSE_EXAMPLE_NET:
+      description: Example response for health score of the entire network (NET type)
       value:
         networkId: "123e4567-e89b-12d3-a456-426614174000"
         netType: "NET"
         score: 94.56
         scoringTime: "2025-12-01T12:00:00Z"
     RESPONSE_EXAMPLE_NET_WIRELESS:
+      description: Example response for health score of the wireless network module (NET_WIRELESS type)
       value:
         networkId: "123e4567-e89b-12d3-a456-426614174000"
         netType: "NET_WIRELESS"
