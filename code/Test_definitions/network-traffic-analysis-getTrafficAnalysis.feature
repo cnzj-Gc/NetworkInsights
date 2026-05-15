@@ -30,7 +30,7 @@ Feature: CAMARA Network Traffic Analysis API vwip - Operation getTrafficAnalysis
     When the request "getTrafficAnalysis" is sent
     Then the response status code is 200
     And the response header "Content-Type" is "application/json"
-    And the response header "x-correlator" has same value as the request header "x-correlator
+    And the response header "x-correlator" has same value as the request header "x-correlator"
     And the response body complies to the OAS schema at "/components/schemas/TrafficAnalysisResponse"
 
   @network_traffic_analysis_getTrafficAnalysis_02_invalid_argument_scenario
