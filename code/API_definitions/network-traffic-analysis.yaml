@@ -42,7 +42,7 @@ servers:
   - url: "{apiRoot}/network-traffic-analysis/vwip"
     variables:
       apiRoot:
-        default: http://localhost:9100
+        default: http://localhost:9091
         description: API root, defined by the service provider, e.g. `api.example.com` or `api.example.com/somepath`
 tags:
   - name: Network Traffic Analysis
@@ -121,45 +121,24 @@ components:
       in: header
       description: Correlation id for the different services
       schema:
-        $ref: "#/components/schemas/XCorrelator"
+        $ref: "../common/CAMARA_common.yaml#/components/schemas/XCorrelator"
 
   headers:
     x-correlator:
       description: Correlation id for the different services
       schema:
-        $ref: "#/components/schemas/XCorrelator"
+        $ref: "../common/CAMARA_common.yaml#/components/schemas/XCorrelator"
 
   schemas:
-    XCorrelator:
-      description: Correlator string, UUID format recommended but any string matching the pattern can be used
-      type: string
-      pattern: '^[a-zA-Z0-9-_:;.\/<>{}]{0,256}$'
-      maxLength: 256
-      minLength: 1
-      example: "b4333c46-49c0-4f62-80d7-f0ef930f1c46"
-
     NetworkId:
       description: Network ID in UUID format (unique identifier of the analyzed network)
       type: string
       format: uuid
+      maxLength: 36
       example: "123e4567-e89b-12d3-a456-426614174000"
 
     TimePeriod:
-      type: object
-      description: Time range for network traffic analysis. A period of time defined by a start date and an end date
-      properties:
-        startDate:
-          type: string
-          format: date-time
-          description: An instant of time, starting of the TimePeriod. It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone.
-          example: "2024-06-01T12:00:00Z"
-        endDate:
-          type: string
-          format: date-time
-          description: An instant of time, ending of the TimePeriod. It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone.
-          example: "2024-07-01T12:00:00Z"
-      required:
-        - startDate
+      $ref: "../common/CAMARA_common.yaml#/components/schemas/TimePeriod"
 
     Frequency:
       description: Analysis granularity (time interval for aggregation)
@@ -190,6 +169,7 @@ components:
               maxItems: 1000
               items:
                 type: object
+                description: Traffic record for a single application
                 properties:
                   app:
                     type: string
@@ -210,37 +190,35 @@ components:
                   accessCount:
                     type: integer
                     description: Total number of accesses to the application
+                    format: int64
                     minimum: 0
+                    maximum: 9223372036854775807
                     example: 150
                   accessUpFlow:
                     type: integer
                     description: Total upstream traffic (bytes)
+                    format: int64
                     minimum: 0
-                    example: 102400  # 100 KB
+                    maximum: 9223372036854775807
+                    example: 102400
                   accessDownFlow:
                     type: integer
                     description: Total downstream traffic (bytes)
+                    format: int64
                     minimum: 0
-                    example: 204800  # 200 KB
+                    maximum: 9223372036854775807
+                    example: 204800
                   accessFlow:
                     type: integer
                     description: Total traffic (up + down, bytes)
+                    format: int64
                     minimum: 0
-                    example: 307200  # 300 KB
+                    maximum: 9223372036854775807
+                    example: 307200
                   startDate:
-                    type: string
-                    format: date-time
-                    description: Start time of the record interval
-                    example: "2024-06-07T00:00:00Z"
-                    pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$'
-                    maxLength: 30
+                    $ref: "../common/CAMARA_common.yaml#/components/schemas/DateTime"
                   endDate:
-                    type: string
-                    format: date-time
-                    description: End time of the record interval
-                    example: "2024-06-07T23:59:59Z"
-                    pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$'
-                    maxLength: 30
+                    $ref: "../common/CAMARA_common.yaml#/components/schemas/DateTime"
                   accessDate:
                     type: string
                     format: date
@@ -251,29 +229,10 @@ components:
             total:
               type: integer
               description: Total number of application records
+              format: int64
               minimum: 0
+              maximum: 9223372036854775807
               example: 22
-
-    ErrorInfo:
-      type: object
-      description: A structured error response providing details about a failed request, including the HTTP status code, an error code, and a human-readable message
-      required:
-        - status
-        - code
-        - message
-      properties:
-        status:
-          type: integer
-          format: int32
-          description: HTTP response status code
-        code:
-          type: string
-          maxLength: 96
-          description: A human-readable code to describe the error
-        message:
-          type: string
-          maxLength: 512
-          description: A human-readable description of what the event represents
 
   responses:
     Generic400:
@@ -284,17 +243,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 400
-                  code:
-                    enum:
-                      - INVALID_ARGUMENT
-                      - OUT_OF_RANGE
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_400_INVALID_ARGUMENT:
               description: Invalid Argument. Generic Syntax Exception
@@ -316,16 +265,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 401
-                  code:
-                    enum:
-                      - UNAUTHENTICATED
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_401_UNAUTHENTICATED:
               description: Request cannot be authenticated and a new authentication is required
@@ -341,16 +281,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 403
-                  code:
-                    enum:
-                      - PERMISSION_DENIED
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_403_PERMISSION_DENIED:
               description: Permission denied. OAuth2 token access does not have the required scope or when the user fails operational security
@@ -366,16 +297,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/ErrorInfo"
-              - type: object
-                properties:
-                  status:
-                    enum:
-                      - 404
-                  code:
-                    enum:
-                      - NOT_FOUND
+            $ref: "../common/CAMARA_common.yaml#/components/schemas/ErrorInfo"
           examples:
             GENERIC_404_NOT_FOUND:
               description: Resource is not found
@@ -386,6 +308,7 @@ components:
 
   examples:
     TrafficAnalysisSuccess:
+      description: Successful traffic analysis response example
       value:
         message: "Network traffic analysis has been completed"
         data:
@@ -394,9 +317,9 @@ components:
               ipv4Address: "202.112.17.122"
               description: "A free cross-platform app for messaging, calls, and media sharing."
               accessCount: 150
-              accessUpFlow: 102400  # 100 KB
-              accessDownFlow: 204800  # 200 KB
-              accessFlow: 307200  # 300 KB
+              accessUpFlow: 102400
+              accessDownFlow: 204800
+              accessFlow: 307200
               startDate: "2024-06-07T00:00:00Z"
               endDate: "2024-06-07T23:59:59Z"
               accessDate: "2024-06-07"
